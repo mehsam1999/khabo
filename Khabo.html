@@ -1,0 +1,358 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Khabo</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=DM+Sans:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: sticky tab bar over three views; the Prototype view pairs a phone-sized chat with a live "what the AI understood" panel. */
+:root{
+  --bg:#f3f6f5; --surface:#ffffff; --ink:#0d2a2b; --muted:#5a6f70; --line:#d5e0de;
+  --accent:#0b8a6a; --accent-ink:#ffffff; --sun:#f6c445; --sun-ink:#4a3600;
+  --good:#0b8a6a; --warn:#b7791f; --bad:#c0392b; --chip:#e4efec; --user:#0d2a2b; --user-ink:#f3f6f5;
+  --display:"Bricolage Grotesque","Trebuchet MS",system-ui,sans-serif;
+  --body:"DM Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0a1718; --surface:#122526; --ink:#e6f1ef; --muted:#93aeac; --line:#244140;
+  --accent:#2fc79d; --accent-ink:#06201a; --sun:#f6c445; --sun-ink:#3d2e00;
+  --good:#2fc79d; --warn:#e2a93b; --bad:#ef7d6f; --chip:#1a3433; --user:#2fc79d; --user-ink:#06201a; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0a1718; --surface:#122526; --ink:#e6f1ef; --muted:#93aeac; --line:#244140;
+  --accent:#2fc79d; --accent-ink:#06201a; --sun:#f6c445; --sun-ink:#3d2e00;
+  --good:#2fc79d; --warn:#e2a93b; --bad:#ef7d6f; --chip:#1a3433; --user:#2fc79d; --user-ink:#06201a; color-scheme:dark}
+
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:15px;line-height:1.55;
+  padding-block:0;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.wrap{max-width:1080px;margin:0 auto;min-width:0}
+h1,h2,h3{font-family:var(--display);line-height:1.1;margin:0;text-wrap:balance;letter-spacing:-.01em}
+h1{font-size:clamp(28px,5vw,44px);font-weight:800}
+h2{font-size:clamp(22px,3.4vw,30px);font-weight:800}
+h3{font-size:17px;font-weight:600}
+p{margin:0}
+.eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+header.top{padding-block:28px 18px;display:grid;gap:10px}
+header.top p{max-width:62ch;color:var(--muted)}
+nav.tabs{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);display:flex;gap:6px;padding-block:8px;border-bottom:1px solid var(--line);overflow-x:auto}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--bg)}
+nav.tabs button{font:inherit;font-weight:500;border:1px solid transparent;background:none;color:var(--muted);padding:9px 14px;border-radius:999px;cursor:pointer;white-space:nowrap}
+nav.tabs button[aria-selected="true"]{background:var(--ink);color:var(--bg)}
+nav.tabs button:focus-visible,.btn:focus-visible,.chip-btn:focus-visible,input:focus-visible{outline:3px solid var(--sun);outline-offset:2px}
+section.view{padding-block:26px 56px;display:grid;gap:28px}
+section.view[hidden]{display:none}
+
+/* problem view */
+.cmp{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:18px;display:grid;gap:10px;min-width:0}
+.panel ul{margin:0;padding-left:18px;display:grid;gap:6px}
+.tag{display:inline-block;font-family:var(--mono);font-size:11px;padding:2px 8px;border-radius:4px;background:var(--chip);color:var(--ink)}
+.tag.sun{background:var(--sun);color:var(--sun-ink)}
+.note{font-size:13px;color:var(--muted)}
+.tbl{overflow-x:auto}
+table{border-collapse:collapse;width:100%;min-width:560px;font-size:14px}
+th,td{text-align:left;padding:10px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-family:var(--mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:500}
+.hl{background:var(--chip);border-left:4px solid var(--sun);padding:16px 18px;border-radius:0 10px 10px 0}
+
+/* prototype view */
+.proto{display:grid;grid-template-columns:minmax(0,380px) minmax(0,1fr);gap:28px;align-items:start}
+@media (max-width:820px){.proto{grid-template-columns:minmax(0,1fr)}}
+.phone{background:var(--surface);border:1px solid var(--line);border-radius:28px;overflow:hidden;display:grid;grid-template-rows:auto 1fr auto;height:680px;box-shadow:0 14px 40px rgba(13,42,43,.12)}
+.phone-h{display:flex;align-items:center;gap:10px;padding:14px 16px;background:var(--accent);color:var(--accent-ink)}
+.logo{width:30px;height:30px;border-radius:8px;background:var(--sun);color:var(--sun-ink);display:grid;place-items:center;font-family:var(--display);font-weight:800}
+.phone-h b{font-family:var(--display);font-size:16px}
+.phone-h small{display:block;opacity:.85;font-size:12px}
+.chat{overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:12px;min-height:0}
+.msg{max-width:92%;padding:10px 13px;border-radius:16px;font-size:14px;min-width:0;overflow-wrap:anywhere}
+.msg.u{align-self:flex-end;background:var(--user);color:var(--user-ink);border-bottom-right-radius:4px}
+.msg.a{align-self:flex-start;background:var(--chip);border-bottom-left-radius:4px;width:100%}
+.opt{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:11px;margin-top:9px;display:grid;gap:6px}
+.opt.top{border-color:var(--accent);border-width:2px}
+.opt-h{display:flex;justify-content:space-between;gap:8px;align-items:baseline}
+.opt-h b{font-family:var(--display);font-size:15px}
+.price{font-family:var(--mono);font-weight:500;font-variant-numeric:tabular-nums}
+.break{display:grid;grid-template-columns:1fr auto;gap:2px 10px;font-size:12.5px;color:var(--muted);font-variant-numeric:tabular-nums;font-family:var(--mono)}
+.break .tot{color:var(--ink);font-weight:500;border-top:1px dashed var(--line);padding-top:3px}
+.eta{display:flex;flex-wrap:wrap;gap:6px;align-items:center;font-size:12.5px}
+.pill{font-size:11.5px;padding:2px 8px;border-radius:999px;border:1px solid var(--line)}
+.pill.g{color:var(--good);border-color:var(--good)}
+.pill.w{color:var(--warn);border-color:var(--warn)}
+.btn{font:inherit;font-weight:700;border:0;background:var(--accent);color:var(--accent-ink);padding:8px 12px;border-radius:8px;cursor:pointer;font-size:13px}
+.btn.ghost{background:none;color:var(--ink);border:1px solid var(--line);font-weight:500}
+.btn:disabled{opacity:.5;cursor:default}
+.row{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px}
+.compose{border-top:1px solid var(--line);padding:10px;display:grid;gap:8px;background:var(--surface)}
+.chips{display:flex;gap:6px;overflow-x:auto;padding-bottom:2px}
+.chip-btn{font:inherit;font-size:12.5px;white-space:nowrap;border:1px solid var(--line);background:var(--bg);color:var(--ink);padding:6px 10px;border-radius:999px;cursor:pointer}
+.compose form{display:flex;gap:8px}
+.compose input{flex:1;min-width:0;font:inherit;font-size:14px;padding:10px 12px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--ink)}
+
+.brain{display:grid;gap:16px;min-width:0}
+.steps{display:grid;gap:10px;counter-reset:s}
+.step{display:grid;grid-template-columns:28px 1fr;gap:10px;align-items:start}
+.step i{font-style:normal;font-family:var(--mono);font-size:12px;width:26px;height:26px;border-radius:50%;display:grid;place-items:center;background:var(--ink);color:var(--bg)}
+.step.on i{background:var(--accent);color:var(--accent-ink)}
+.kv{display:flex;flex-wrap:wrap;gap:6px}
+.kv span{font-family:var(--mono);font-size:12px;background:var(--chip);padding:4px 8px;border-radius:6px}
+.kv span b{color:var(--accent);font-weight:500}
+.why li{margin-bottom:4px}
+
+/* script view */
+.timeline{display:grid;gap:12px}
+.beat{display:grid;grid-template-columns:96px minmax(0,1fr);gap:16px;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:16px}
+@media (max-width:560px){.beat{grid-template-columns:minmax(0,1fr)}}
+.time{font-family:var(--mono);font-size:13px;color:var(--accent);font-weight:500}
+.say{margin-top:8px;padding:10px 12px;border-left:3px solid var(--sun);background:var(--chip);border-radius:0 8px 8px 0;font-size:14px}
+.qa{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px}
+.copy{justify-self:start}
+footer{padding-block:24px 40px;color:var(--muted);font-size:12.5px;border-top:1px solid var(--line)}
+@media (prefers-reduced-motion:no-preference){.msg{animation:in .25s ease-out}@keyframes in{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}}
+</style>
+
+<div class="wrap">
+<header class="top">
+  <span class="eyebrow">Product Owner prototype · Foodi vs Foodpanda</span>
+  <h1>Khabo</h1>
+  <p>One sentence in English, Bangla or Banglish. Khabo answers with the best-fit order, the full price before checkout, and an honest delivery window.</p>
+</header>
+
+<nav class="tabs" role="tablist" aria-label="Sections">
+  <button role="tab" id="t-problem" aria-selected="false" data-v="problem">1 · Problem</button>
+  <button role="tab" id="t-prototype" aria-selected="true" data-v="prototype">2 · Live prototype</button>
+</nav>
+
+<!-- PROBLEM -->
+<section class="view" id="v-problem" hidden>
+  <div style="display:grid;gap:10px">
+    <span class="eyebrow">Step 1 · Compare two apps</span>
+    <h2>Both apps make you browse. Neither lets you just say what you want.</h2>
+    <p class="note" style="max-width:70ch">Pain points below are hypotheses from app-store reviews and hands-on use. Edit them to match the evidence you gathered in the assessment.</p>
+  </div>
+  <div class="cmp">
+    <div class="panel"><span class="tag">Foodpanda</span><h3>Where users get stuck</h3>
+      <ul><li>Long lists and filters. Finding "spicy, under 500, for two" takes many taps.</li>
+      <li>Fees and totals appear late, at checkout.</li>
+      <li>Items go out of stock after the order is placed.</li>
+      <li>Delivery estimates are a single number with no confidence.</li></ul></div>
+    <div class="panel"><span class="tag">Foodi</span><h3>Where users get stuck</h3>
+      <ul><li>Smaller catalogue, so search must work harder to feel useful.</li>
+      <li>Basic keyword search. Bangla and mixed-language queries often fail.</li>
+      <li>Fewer discovery tools for first-time users.</li>
+      <li>Support is reactive. Problems are fixed after the order goes wrong.</li></ul></div>
+  </div>
+  <div class="tbl"><table>
+    <thead><tr><th>Pain point</th><th>Who feels it</th><th>AI can help by</th><th>Pick</th></tr></thead>
+    <tbody>
+      <tr><td>Too many taps to find a meal that fits a budget</td><td>Students, office workers</td><td>Understanding one natural sentence</td><td><span class="tag sun">MVP</span></td></tr>
+      <tr><td>Surprise total at checkout</td><td>Everyone</td><td>Showing item + fee + VAT up front</td><td><span class="tag sun">MVP</span></td></tr>
+      <tr><td>Out-of-stock after ordering</td><td>Evening and weekend orders</td><td>Auto-suggesting a close substitute</td><td><span class="tag sun">MVP</span></td></tr>
+      <tr><td>Vague delivery time</td><td>People with a deadline</td><td>Showing a time range with confidence</td><td><span class="tag sun">MVP</span></td></tr>
+      <tr><td>Slow support</td><td>Anyone with a late order</td><td>Proactive delay alerts</td><td><span class="tag">Later</span></td></tr>
+    </tbody></table></div>
+  <div class="hl"><h3>Product decision</h3>
+    <p style="margin-top:6px">A smaller app wins by being easier, not bigger. The AI Concierge removes the browsing step and makes cost and time predictable. Those two things are where a challenger can feel better on day one without more restaurants.</p></div>
+</section>
+
+<!-- PROTOTYPE -->
+<section class="view" id="v-prototype">
+  <div class="proto">
+    <div class="phone" aria-label="Foodie app prototype">
+      <div class="phone-h"><div class="logo">F</div><div><b>Khabo</b><small>Sample restaurants · demo data</small></div></div>
+      <div class="chat" id="chat" aria-live="polite"></div>
+      <div class="compose">
+        <div class="chips" id="chips"></div>
+        <form id="form"><input id="q" type="text" autocomplete="off" placeholder="Try: 600 taka e spicy biryani for 2" aria-label="Describe what you want to eat"><button class="btn" type="submit">Ask</button></form>
+      </div>
+    </div>
+
+    <div class="brain">
+      <div class="panel">
+        <span class="eyebrow">What the AI understood</span>
+        <div class="kv" id="intent"><span>waiting for a request…</span></div>
+      </div>
+      <div class="panel">
+        <span class="eyebrow">How the answer is built</span>
+        <div class="steps" id="steps">
+          <div class="step" data-s="1"><i>1</i><div><b>Read the sentence.</b> Budget, headcount, cuisine, spice level and time limit come from plain text, including Bangla digits.</div></div>
+          <div class="step" data-s="2"><i>2</i><div><b>Filter the menu.</b> Items that break the budget or the time limit are removed first.</div></div>
+          <div class="step" data-s="3"><i>3</i><div><b>Price it honestly.</b> Item × people + delivery + 5% VAT, shown before the customer taps anything.</div></div>
+          <div class="step" data-s="4"><i>4</i><div><b>Rank and explain.</b> Rating, fit and distance decide the order. Each pick says why.</div></div>
+          <div class="step" data-s="5"><i>5</i><div><b>Protect the order.</b> If an item sells out, a close substitute is offered at once.</div></div>
+        </div>
+      </div>
+      <div class="panel why"><span class="eyebrow">Why each feature exists</span>
+        <ul>
+          <li><b>Natural-language order:</b> removes the browse-and-filter step.</li>
+          <li><b>Upfront total:</b> no checkout surprise, so fewer abandoned carts.</li>
+          <li><b>Time range + confidence:</b> sets honest expectations and cuts "where is my order" contacts.</li>
+          <li><b>Smart substitute:</b> saves orders that would otherwise be cancelled.</li>
+        </ul>
+        <p class="note">This demo runs entirely in the page with rule-based logic and sample data. A production version would swap the parser for a language model and the sample menu for live restaurant data.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer>Restaurants, prices and ratings are invented sample data.</footer>
+</div>
+
+<script>
+(function(){
+  // ---------- tabs ----------
+  var views=["problem","prototype"];
+  function show(v){
+    if(views.indexOf(v)<0)v="prototype";
+    views.forEach(function(n){
+      document.getElementById("v-"+n).hidden=n!==v;
+      document.getElementById("t-"+n).setAttribute("aria-selected",n===v?"true":"false");
+    });
+  }
+  document.querySelectorAll("nav.tabs button").forEach(function(b){
+    b.addEventListener("click",function(){show(b.dataset.v);try{history.replaceState(null,"","#"+b.dataset.v)}catch(e){}});
+  });
+  show((location.hash||"").replace("#",""));
+
+  // ---------- sample data ----------
+  var MENU=[
+    {id:1,n:"Kacchi Biryani (mutton)",r:"Dhaka Dum House",p:420,t:["biryani","beef","spicy"],prep:18,d:2.1,rt:4.6},
+    {id:2,n:"Chicken Biryani",r:"Dhaka Dum House",p:260,t:["biryani","chicken","spicy"],prep:15,d:2.1,rt:4.6},
+    {id:3,n:"Beef Tehari",r:"Old Town Tehari",p:180,t:["biryani","beef","spicy"],prep:12,d:1.2,rt:4.3},
+    {id:4,n:"Smash Burger",r:"Patty Lab",p:290,t:["burger","beef"],prep:12,d:3.0,rt:4.4},
+    {id:5,n:"Crispy Chicken Burger",r:"Patty Lab",p:240,t:["burger","chicken"],prep:10,d:3.0,rt:4.4},
+    {id:6,n:"Pepperoni Pizza (9 in)",r:"Slice Society",p:520,t:["pizza","beef"],prep:20,d:2.8,rt:4.5},
+    {id:7,n:"Veg Noodles",r:"Wok Corner",p:190,t:["noodles","veg"],prep:10,d:1.8,rt:4.2},
+    {id:8,n:"Chicken Chow Mein",r:"Wok Corner",p:220,t:["noodles","chicken"],prep:11,d:1.8,rt:4.2},
+    {id:9,n:"Paneer Veg Thali",r:"Green Plate",p:250,t:["veg","thali"],prep:14,d:2.4,rt:4.5},
+    {id:10,n:"Mishti Doi (cup)",r:"Sweet Corner",p:90,t:["dessert","veg"],prep:4,d:1.0,rt:4.7}
+  ];
+  var KEYS={
+    biryani:["biryani","biriyani","tehari","kacchi","বিরিয়ানি","তেহারি","কাচ্চি"],
+    burger:["burger","বার্গার"],pizza:["pizza","পিৎজা","পিজা"],noodles:["noodle","noodles","chow","chowmein","নুডলস"],
+    chicken:["chicken","মুরগি","মুরগী"],beef:["beef","মাংস","গরু"],veg:["veg","vegetarian","নিরামিষ","ভেজ"],
+    dessert:["dessert","sweet","mishti","মিষ্টি"],spicy:["spicy","jhal","ঝাল","hot"]
+  };
+  var BN="০১২৩৪৫৬৭৮৯";
+  function norm(s){return s.replace(/[০-৯]/g,function(c){return BN.indexOf(c)})}
+  function esc(s){return s.replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]})}
+  var WORDS={one:1,two:2,three:3,four:4,"এক":1,"দুই":2,"দুইজন":2,"তিন":3,"চার":4};
+
+  function parse(text){
+    var s=norm(text.toLowerCase()),o={budget:null,people:1,maxTime:null,tags:[]};
+    var m=s.match(/(\d{2,5})\s*(tk|taka|৳|টাকা|bdt)/)||s.match(/(?:under|budget|within|max)\s*(\d{2,5})/)||s.match(/(\d{3,5})/);
+    if(m)o.budget=parseInt(m[1],10);
+    var t=s.match(/(\d{1,3})\s*(min|mins|minute|minutes|মিনিট)/);if(t)o.maxTime=parseInt(t[1],10);
+    var p=s.match(/for\s*(\d{1,2})\b/)||s.match(/(\d{1,2})\s*(people|persons|jon|জন)/);
+    if(p)o.people=parseInt(p[1],10);
+    else{Object.keys(WORDS).forEach(function(w){if(new RegExp("for\\s*"+w+"\\b").test(s)||(s.indexOf(w)>-1&&/[জ]ন/.test(s)))o.people=WORDS[w]})}
+    Object.keys(KEYS).forEach(function(k){if(KEYS[k].some(function(w){return s.indexOf(w)>-1}))o.tags.push(k)});
+    return o;
+  }
+  function price(item,people){
+    var items=item.p*people,fee=30+Math.round(item.d*8),vat=Math.round(items*0.05);
+    return {items:items,fee:fee,vat:vat,total:items+fee+vat};
+  }
+  function eta(item){
+    var mid=item.prep+Math.round(item.d*5)+(item.rt<4.4?4:2);
+    return {lo:mid-3,hi:mid+4,mid:mid,conf:item.d<=2.5?"High":"Medium"};
+  }
+  function evaluate(o,exclude){
+    var all=MENU.filter(function(i){return exclude.indexOf(i.id)<0}).map(function(i){
+      var hit=o.tags.filter(function(t){return i.t.indexOf(t)>-1}).length;
+      return {i:i,hit:hit,pr:price(i,o.people),e:eta(i)};
+    });
+    var matched=all.filter(function(x){return o.tags.length===0||x.hit>0});
+    var okTags=o.tags.filter(function(t){return t!=="spicy"});
+    var strict=matched.filter(function(x){return okTags.length===0||okTags.every(function(t){return x.i.t.indexOf(t)>-1})||x.hit===o.tags.length});
+    if(strict.length)matched=strict;
+    function score(x){return x.hit*3+x.i.rt*2-x.e.mid/10}
+    var fit=matched.filter(function(x){return (!o.budget||x.pr.total<=o.budget)&&(!o.maxTime||x.e.hi<=o.maxTime)});
+    fit.sort(function(a,b){return score(b)-score(a)});
+    if(fit.length)return {ok:true,list:fit.slice(0,3)};
+    matched.sort(function(a,b){return a.pr.total-b.pr.total});
+    return {ok:false,list:matched.slice(0,1),all:all};
+  }
+
+  // ---------- rendering ----------
+  var chat=document.getElementById("chat"),state={o:null,list:[],excluded:[]};
+  function say(cls,html){var d=document.createElement("div");d.className="msg "+cls;d.innerHTML=html;chat.appendChild(d);chat.scrollTop=chat.scrollHeight;return d}
+  function bdt(n){return "৳"+n}
+  function why(x,o,rank){
+    var r=[];
+    if(x.hit)r.push("matches "+o.tags.filter(function(t){return x.i.t.indexOf(t)>-1}).join(", "));
+    r.push("rated "+x.i.rt.toFixed(1));
+    if(o.budget)r.push(bdt(o.budget-x.pr.total)+" under budget");
+    r.push(x.i.d+" km away");
+    return r.join(" · ");
+  }
+  function card(x,o,rank,allowSoldOut){
+    var cls=rank===0?"opt top":"opt";
+    var e=x.e,pc=e.conf==="High"?"pill g":"pill w";
+    var qty=o.people>1?" × "+o.people:"";
+    return '<div class="'+cls+'" data-id="'+x.i.id+'">'+
+      '<div class="opt-h"><b>'+esc(x.i.n)+'</b><span class="price">'+bdt(x.pr.total)+'</span></div>'+
+      '<div class="note">'+esc(x.i.r)+(rank===0?' · <b style="color:var(--accent)">Best fit</b>':'')+'</div>'+
+      '<div class="break"><span>Items'+qty+'</span><span>'+bdt(x.pr.items)+'</span><span>Delivery</span><span>'+bdt(x.pr.fee)+'</span><span>VAT 5%</span><span>'+bdt(x.pr.vat)+'</span><span class="tot">Total, no surprises</span><span class="tot">'+bdt(x.pr.total)+'</span></div>'+
+      '<div class="eta"><span>Arrives in <b>'+e.lo+'–'+e.hi+' min</b></span><span class="'+pc+'">'+e.conf+' confidence</span></div>'+
+      '<div class="note">Why: '+esc(why(x,o,rank))+'</div>'+
+      '<div class="row"><button class="btn" data-act="order">Order</button>'+(allowSoldOut?'<button class="btn ghost" data-act="soldout">Simulate sold out</button>':'')+'</div></div>';
+  }
+  function setIntent(o){
+    var k=document.getElementById("intent"),h="";
+    h+='<span>budget <b>'+(o.budget?bdt(o.budget):"none")+'</b></span>';
+    h+='<span>people <b>'+o.people+'</b></span>';
+    h+='<span>time limit <b>'+(o.maxTime?o.maxTime+" min":"none")+'</b></span>';
+    h+='<span>food <b>'+(o.tags.length?o.tags.join(", "):"any")+'</b></span>';
+    k.innerHTML=h;
+    document.querySelectorAll(".step").forEach(function(s){s.classList.add("on")});
+  }
+  function ask(text){
+    text=text.trim();if(!text)return;
+    say("u",esc(text));
+    var o=parse(text);state.o=o;state.excluded=[];setIntent(o);
+    var r=evaluate(o,[]);state.list=r.list;
+    if(r.ok){
+      var intro="I found "+r.list.length+" option"+(r.list.length>1?"s":"")+" that fit"+(o.budget?" "+bdt(o.budget):"")+(o.maxTime?" and "+o.maxTime+" minutes":"")+". Totals include delivery and VAT.";
+      say("a",esc(intro)+r.list.map(function(x,i){return card(x,o,i,i===0)}).join(""));
+    }else if(r.list.length){
+      var x=r.list[0],gap=o.budget?Math.max(0,x.pr.total-o.budget):0;
+      say("a","Nothing fits every limit. The closest match is below"+(gap?", "+bdt(gap)+" over your budget":"")+(o.maxTime?" or slower than "+o.maxTime+" min":"")+". Want to relax one limit?"+card(x,o,0,false));
+    }else{
+      say("a","I could not find that on today's sample menu. Try biryani, burger, pizza, noodles, veg or dessert.");
+    }
+  }
+  chat.addEventListener("click",function(ev){
+    var b=ev.target.closest("button[data-act]");if(!b)return;
+    var el=b.closest(".opt"),id=+el.dataset.id;
+    if(b.dataset.act==="order"){
+      var it=MENU.filter(function(m){return m.id===id})[0];
+      say("a","Order placed for <b>"+esc(it.n)+"</b> from "+esc(it.r)+". You will get a delay alert only if the window changes.");
+      b.disabled=true;b.textContent="Placed";
+    }
+    if(b.dataset.act==="soldout"){
+      b.disabled=true;el.style.opacity=".55";
+      state.excluded.push(id);
+      var gone=MENU.filter(function(m){return m.id===id})[0];
+      var r=evaluate(state.o,state.excluded.concat([]));
+      var pick=r.list[0];
+      if(!pick){say("a","<b>"+esc(gone.n)+"</b> just sold out and nothing similar fits. I can refund or suggest a different cuisine.");return}
+      var oldTotal=price(gone,state.o.people).total,diff=pick.pr.total-oldTotal;
+      say("a","<b>"+esc(gone.n)+"</b> just sold out. Instead of cancelling, here is the closest substitute ("+(diff>=0?bdt(diff)+" more":bdt(-diff)+" less")+"):"+card(pick,state.o,0,false));
+      document.querySelectorAll(".step")[4].scrollIntoView({block:"nearest"});
+    }
+  });
+  var chipsEl=document.getElementById("chips");
+  ["600 taka e spicy biryani for 2","veg lunch under 300, 30 min","৩০০ টাকায় চিকেন বার্গার","pizza under 300"].forEach(function(t){
+    var b=document.createElement("button");b.type="button";b.className="chip-btn";b.textContent=t;
+    b.addEventListener("click",function(){ask(t)});chipsEl.appendChild(b);
+  });
+  document.getElementById("form").addEventListener("submit",function(ev){
+    ev.preventDefault();var i=document.getElementById("q");ask(i.value);i.value="";
+  });
+
+  // opening state: greeting + a worked example so the first view shows what it does
+  say("a","Hi! Tell me what you want, your budget and how many people. I understand English, Bangla and Banglish.");
+  ask("600 taka e spicy biryani for 2");
+})();
+</script>
+
+</body></html>
